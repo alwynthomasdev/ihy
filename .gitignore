@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+wheels/
+*.whl
+
+# Environments
+.venv/
+venv/
+env/
+.python-version
+
+# Tools
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.idea/
+.vscode/
+
+# ihy / homr output and temp files
+*.mxl
+*.musicxml
+*_teaser.png
+*_debug*.png
+ihy-*/
+tmp/
+out/
+output/
+
+# Downloaded models (homr stores them in its package; never commit them)
+*.onnx
+*.zip
+
+# OS clutter
+.DS_Store
+Thumbs.db
+desktop.ini

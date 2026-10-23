@@ -1,0 +1,39 @@
+[project]
+name = "ihy-omr"
+version = "0.1.0"
+description = "Sheet music image to MusicXML (.mxl) converter"
+readme = "README.md"
+license = "AGPL-3.0-only"
+license-files = ["LICENSE"]
+requires-python = ">=3.11,<3.13"
+keywords = ["omr", "optical music recognition", "musicxml", "musescore", "sheet music"]
+classifiers = [
+    "Environment :: Console",
+    "Programming Language :: Python :: 3",
+    "Topic :: Multimedia :: Sound/Audio",
+]
+dependencies = [
+    "homr>=0.7,<0.8",
+    "music21>=9.1",
+    # homr already depends on the headless build; installing opencv-python too
+    # would put two copies of cv2 in the same environment.
+    "opencv-python-headless>=4.8",
+    "numpy>=1.26",
+]
+
+[project.scripts]
+ihy = "ihy.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ihy"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["e2e: end-to-end test that runs homr (needs downloaded models)"]
