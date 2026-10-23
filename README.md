@@ -9,35 +9,37 @@ You don't need Python installed beforehand. The installer sets up [uv](https://d
 **macOS / Linux**
 
 ```bash
-curl -LsSf https://raw.githubusercontent.com/<owner>/ihy/main/install.sh | sh
+curl -LsSf https://raw.githubusercontent.com/alwynthomasdev/ihy/main/install.sh | sh
 ```
 
 **Windows (PowerShell)**
 
 ```powershell
-irm https://raw.githubusercontent.com/<owner>/ihy/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/alwynthomasdev/ihy/main/install.ps1 | iex
 ```
 
 When it finishes, open a new terminal and run `ihy --help`.
 
+> **Windows PowerShell users:** in PowerShell, `ihy` is a built-in alias for `Invoke-History`, so typing `ihy` won't start this tool. Use **`ihy-omr`** instead. It is the same program under a second name, and every example below works with it (for example `ihy-omr input.png`). `ihy.exe` also works. In Command Prompt (cmd), plain `ihy` works as normal.
+
 **Manual install.** If you already use uv or pipx:
 
 ```bash
-uv tool install --python 3.12 git+https://github.com/<owner>/ihy.git
+uv tool install --python 3.12 git+https://github.com/alwynthomasdev/ihy.git
 # or
-pipx install --python python3.12 git+https://github.com/<owner>/ihy.git
+pipx install --python python3.12 git+https://github.com/alwynthomasdev/ihy.git
 ```
 
 **A specific version** (pinned to a release tag):
 
 ```bash
-uv tool install --python 3.12 git+https://github.com/<owner>/ihy.git@v0.1.0
+uv tool install --python 3.12 git+https://github.com/alwynthomasdev/ihy.git@v0.1.0
 # with the install scripts:
-curl -LsSf https://raw.githubusercontent.com/<owner>/ihy/main/install.sh | sh -s -- https://github.com/<owner>/ihy.git v0.1.0
+curl -LsSf https://raw.githubusercontent.com/alwynthomasdev/ihy/main/install.sh | sh -s -- https://github.com/alwynthomasdev/ihy.git v0.1.0
 ```
 
 ```powershell
-$env:IHY_REF = "v0.1.0"; irm https://raw.githubusercontent.com/<owner>/ihy/main/install.ps1 | iex
+$env:IHY_REF = "v0.1.0"; irm https://raw.githubusercontent.com/alwynthomasdev/ihy/main/install.ps1 | iex
 ```
 
 ihy needs Python 3.11 or 3.12 (the versions homr supports). The commands above request 3.12.
@@ -125,11 +127,13 @@ What the steps do:
 
 ## Upgrading and uninstalling
 
-```bash
-uv tool upgrade ihy        # upgrade
-uv tool uninstall ihy      # uninstall
+The tool is registered under its package name, **`ihy-omr`**:
 
-pipx upgrade ihy-omr       # if you installed with pipx
+```bash
+uv tool upgrade ihy-omr        # upgrade
+uv tool uninstall ihy-omr      # uninstall
+
+pipx upgrade ihy-omr           # if you installed with pipx
 pipx uninstall ihy-omr
 ```
 
@@ -144,6 +148,9 @@ To move to a specific version, run the install command again with the tag (for e
 - When correcting in MuseScore, **check the clef, key signature and time signature first**. A mistake there throws off everything after it. Then check note lengths bar by bar.
 
 ## Troubleshooting
+
+**Typing `ihy` in PowerShell shows "Cannot locate the history for command line" or re-runs an old command.**
+PowerShell has a built-in alias `ihy` (Invoke-History). Use `ihy-omr` or `ihy.exe` instead. See the note under [Install](#install).
 
 **`ihy: command not found` (or "not recognized") after installing.**
 Open a new terminal so the updated PATH is picked up. If that doesn't help, run `uv tool update-shell` and open a new terminal again. The command lives in `~/.local/bin` (Windows: `%USERPROFILE%\.local\bin`). Add that folder to your PATH if needed.

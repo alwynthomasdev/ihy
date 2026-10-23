@@ -13,4 +13,5 @@ First release.
 - Export with music21. If the recognised MusicXML can't be parsed, the raw file is kept and a warning is shown.
 - `--keep-temp` keeps intermediate files. `--download-models` fetches homr's models ahead of time.
 - Timings for each stage. Non-zero exit code on failure.
+- Also installed as `ihy-omr`, because `ihy` is a built-in alias in PowerShell.
 - One-line installers for macOS/Linux (`install.sh`) and Windows (`install.ps1`) using uv.

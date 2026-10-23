@@ -1,14 +1,14 @@
 #!/bin/sh
 # Install the ihy command (macOS / Linux).
 #
-#   curl -LsSf https://raw.githubusercontent.com/<owner>/ihy/main/install.sh | sh
-#   curl -LsSf https://raw.githubusercontent.com/<owner>/ihy/main/install.sh | sh -s -- [REPO_URL] [REF]
+#   curl -LsSf https://raw.githubusercontent.com/alwynthomasdev/ihy/main/install.sh | sh
+#   curl -LsSf https://raw.githubusercontent.com/alwynthomasdev/ihy/main/install.sh | sh -s -- [REPO_URL] [REF]
 #
 # REPO_URL defaults to the main ihy repository; REF is an optional branch or
 # tag such as v0.1.0. Both can also be set with IHY_REPO / IHY_REF.
 set -eu
 
-DEFAULT_REPO="https://github.com/<owner>/ihy.git"
+DEFAULT_REPO="https://github.com/alwynthomasdev/ihy.git"
 PYTHON_VERSION="3.12"
 REPO="${1:-${IHY_REPO:-$DEFAULT_REPO}}"
 REF="${2:-${IHY_REF:-}}"

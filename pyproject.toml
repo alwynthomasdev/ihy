@@ -23,6 +23,9 @@ dependencies = [
 
 [project.scripts]
 ihy = "ihy.cli:main"
+# Same tool under a second name: in PowerShell, `ihy` is a built-in alias
+# for Invoke-History, so Windows users can type `ihy-omr` instead.
+ihy-omr = "ihy.cli:main"
 
 [dependency-groups]
 dev = ["pytest>=8"]
