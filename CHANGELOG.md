@@ -2,6 +2,17 @@
 
 All notable changes to ihy are listed here. Versions follow [Semantic Versioning](https://semver.org).
 
+## v0.2.0 (2026-10-23)
+
+### Fixed
+- **Bars were corrupted when the time signature was wrong.** music21's export re-split any bar that didn't fit the time signature, moving notes into neighbouring bars. Bars are now kept exactly as homr recognised them.
+- **Wrong time signatures.** homr guesses the top number from the median bar length of the whole piece, so pieces that change metre (such as 6/8 → 2/4) came out wrong. ihy now works out each section's time signature separately and tidies odd forms (12/16 → 3/4).
+
+### Added
+- `--instrument {cello,violin,viola,bass,piano,voice}` sets the instrument MuseScore opens the part as, including its playback sound. Previously single-staff parts were always "Voice".
+- `--time SIG[,SIG...]` sets the time signature(s) yourself, one per change in the piece.
+- The chosen time signatures and instrument are printed after each conversion.
+
 ## v0.1.0 (2026-10-23)
 
 First release.

@@ -50,7 +50,7 @@ def test_folder_batch_continues_after_failure(tmp_path: Path, monkeypatch, capsy
         xml.write_text("<x/>")
         return xml
 
-    def fake_to_mxl(musicxml: Path, output: Path) -> ExportResult:
+    def fake_to_mxl(musicxml: Path, output: Path, **kwargs) -> ExportResult:
         output.write_bytes(b"PK")
         return ExportResult(path=output, parts=1, measures=1, notes=3)
 
@@ -111,3 +111,16 @@ def test_readme_matches_help(capsys, monkeypatch):
     help_text = capsys.readouterr().out.strip()
     readme = (Path(__file__).parent.parent / "README.md").read_text(encoding="utf-8")
     assert help_text in readme
+
+
+def test_bad_time_value_is_usage_error(straight_page: Path, capsys):
+    with pytest.raises(SystemExit) as exc:
+        cli.main([str(straight_page), "--time", "3/5"])
+    assert exc.value.code == 2
+    assert "not a time signature" in capsys.readouterr().err
+
+
+def test_bad_instrument_is_usage_error(straight_page: Path, capsys):
+    with pytest.raises(SystemExit) as exc:
+        cli.main([str(straight_page), "--instrument", "kazoo"])
+    assert exc.value.code == 2

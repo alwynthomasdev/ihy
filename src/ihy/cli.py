@@ -12,6 +12,7 @@ from pathlib import Path
 
 from . import SUPPORTED_EXTENSIONS, __version__
 from .export import InvalidMusicXML, to_mxl
+from .postprocess import INSTRUMENTS, parse_time_list
 from .preprocess import ImageReadError, preprocess
 from .recognise import HomrFailed, HomrNotFound, download_models, models_downloaded, recognise
 
@@ -23,6 +24,10 @@ examples:
   ihy input.png --no-preprocess   skip the OpenCV clean-up step
   ihy input.png --binarise        convert to pure black and white before recognition
   ihy input.png --keep-temp       keep intermediate files for debugging
+  ihy input.png --instrument cello
+                                  label the part as cello (also violin, viola, bass, piano, voice)
+  ihy input.png --time 3/4        set the time signature instead of guessing it
+  ihy input.png --time 6/8,2/4    one value per time signature in the piece, in order
   ihy --download-models           download homr's models now (one-off, ~150 MB)
 
 Open the resulting .mxl in MuseScore and correct any mistakes.
@@ -43,6 +48,16 @@ class Outcome:
     @property
     def ok(self) -> bool:
         return self.error is None
+
+
+def _time_arg(text: str) -> list[str]:
+    try:
+        values = parse_time_list(text)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(str(exc)) from exc
+    if not values:
+        raise argparse.ArgumentTypeError("give at least one time signature, e.g. 3/4")
+    return values
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -83,6 +98,19 @@ def build_parser() -> argparse.ArgumentParser:
         "--keep-temp",
         action="store_true",
         help="keep intermediate files (preprocessed image, raw MusicXML) and print where they are",
+    )
+    parser.add_argument(
+        "--instrument",
+        choices=sorted(INSTRUMENTS),
+        help="instrument for the part(s) in MuseScore; default: homr's guess "
+        "(Voice for one staff, Piano for two)",
+    )
+    parser.add_argument(
+        "--time",
+        type=_time_arg,
+        metavar="SIG[,SIG...]",
+        help="time signature(s), e.g. 3/4, or 6/8,2/4 for a piece that changes; "
+        "default: worked out from the recognised bars",
     )
     parser.add_argument(
         "--download-models",
@@ -138,12 +166,17 @@ def process_one(image: Path, out: Path, workdir: Path, args: argparse.Namespace)
         print(f"  recognise   {outcome.timings['recognise']:6.1f}s")
 
         start = time.perf_counter()
-        result = to_mxl(musicxml, out)
+        result = to_mxl(musicxml, out, instrument=args.instrument, time=args.time)
         outcome.timings["export"] = time.perf_counter() - start
         print(
             f"  export      {outcome.timings['export']:6.1f}s  "
             f"({result.parts} part(s), {result.measures} measure(s), {result.notes} note(s))"
         )
+        if result.time_signatures:
+            how = "as given" if args.time else "worked out; use --time to change"
+            print(f"  time        {' -> '.join(result.time_signatures)}  ({how})")
+        if result.instrument:
+            print(f"  instrument  {result.instrument}")
         outcome.output = result.path
         if result.notes == 0:
             print("  warning: no notes were recognised; check the image quality", file=sys.stderr)

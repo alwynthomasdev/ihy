@@ -76,3 +76,44 @@ def test_invalid_musicxml_keeps_raw_copy(tmp_path: Path):
     assert raw is not None and raw.exists()
     assert raw.read_text(encoding="utf-8") == bad.read_text(encoding="utf-8")
     assert not (tmp_path / "out" / "score.mxl").exists()
+
+
+def test_instrument_written_for_musescore(simple_xml: Path, tmp_path: Path):
+    out = to_mxl(simple_xml, tmp_path / "score.mxl", instrument="cello").path
+    with zipfile.ZipFile(out) as z:
+        xml = z.read("score.xml").decode("utf-8")
+    assert "<part-name>Violoncello</part-name>" in xml
+    assert "<instrument-sound>strings.cello</instrument-sound>" in xml
+    assert "<midi-program>43</midi-program>" in xml
+    inst = music21.converter.parse(str(out)).parts[0].getInstrument()
+    assert isinstance(inst, music21.instrument.Violoncello)
+
+
+def test_time_override(simple_xml: Path, tmp_path: Path):
+    result = to_mxl(simple_xml, tmp_path / "score.mxl", time=["6/8"])
+    assert result.time_signatures == ["6/8"]
+    ts = music21.converter.parse(str(result.path)).flatten().getElementsByClass("TimeSignature")[0]
+    assert ts.ratioString == "6/8"
+
+
+def test_overfull_bar_is_not_rebarred(tmp_path: Path):
+    """A bar homr over-filled must stay one bar, not spill into the next one.
+
+    music21's default export re-bars such measures, which shifted every later
+    note and garbled v0.1.0 output.
+    """
+    xml = SIMPLE_MUSICXML.replace(
+        '<note><pitch><step>F</step><octave>4</octave></pitch><duration>1</duration><type>quarter</type></note>',
+        '<note><pitch><step>F</step><octave>4</octave></pitch><duration>2</duration><type>half</type></note>',
+    ).replace(
+        "</measure>\n  </part>",
+        '</measure>\n    <measure number="2"><note><pitch><step>C</step><octave>5</octave></pitch>'
+        "<duration>3</duration><type>half</type><dot/></note></measure>\n  </part>",
+    )
+    src = tmp_path / "overfull.musicxml"
+    src.write_text(xml, encoding="utf-8")
+    out = to_mxl(src, tmp_path / "score.mxl", time=["3/4"]).path
+    measures = music21.converter.parse(str(out)).parts[0].getElementsByClass("Measure")
+    assert len(measures) == 2
+    assert [n.nameWithOctave for n in measures[0].notes] == ["A-4", "G4", "F4"]
+    assert [n.nameWithOctave for n in measures[1].notes] == ["C5"]
