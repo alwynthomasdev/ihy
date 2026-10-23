@@ -15,6 +15,9 @@ TARGET_WIDTH = 1920
 # Staff spacing (pixels between staff lines) below which recognition suffers.
 MIN_STAFF_SPACING = 14
 MAX_UPSCALE = 4.0
+# Larger images are shrunk to this width first: homr works at 1920px anyway,
+# and denoising a huge render (e.g. an A3 PDF page) is slow.
+MAX_WIDTH = 3000
 # Ignore skew estimates larger than this; they are almost certainly wrong.
 MAX_SKEW_DEGREES = 15.0
 
@@ -168,6 +171,12 @@ def preprocess(src: Path, dest: Path, *, binarise_output: bool = False) -> Prepr
     result = PreprocessResult(path=dest)
     grey = read_image(src)
     result.steps.append("greyscale")
+
+    if grey.shape[1] > MAX_WIDTH:
+        shrink = MAX_WIDTH / grey.shape[1]
+        grey = cv2.resize(grey, None, fx=shrink, fy=shrink, interpolation=cv2.INTER_AREA)
+        result.scale = shrink
+        result.steps.append(f"downscale x{shrink:.2f}")
 
     angle = estimate_skew(grey)
     if abs(angle) >= 0.05:

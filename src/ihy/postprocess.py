@@ -133,6 +133,66 @@ def fix_time_signatures(score, override: list[str] | None = None) -> list[str]:
     return chosen
 
 
+def _same(a, b) -> bool:
+    """Whether two clefs / key signatures / time signatures say the same thing."""
+    if a is None or b is None or type(a) is not type(b):
+        return False
+    if isinstance(a, meter.TimeSignature):
+        return a.ratioString == b.ratioString
+    if hasattr(a, "sharps"):
+        return a.sharps == b.sharps
+    if hasattr(a, "sign"):
+        return (a.sign, a.line, a.octaveChange) == (b.sign, b.line, b.octaveChange)
+    return False
+
+
+def _last(part, class_name: str):
+    found = list(part.recurse().getElementsByClass(class_name))
+    return found[-1] if found else None
+
+
+def merge_scores(scores: list) -> tuple[object, list[str]]:
+    """Join the scores of several pages into one, in order.
+
+    Each later page's bars are appended to the matching part (by position)
+    of the first page and renumbered. Clefs, key and time signatures that
+    homr repeats at the top of every page are dropped when they match what
+    is already in force, so they don't appear as changes. Returns the merged
+    score and any warnings.
+    """
+    if not scores:
+        raise ValueError("no pages to merge")
+    warnings: list[str] = []
+    base = scores[0]
+    base_parts = list(base.parts)
+    for page_index, score in enumerate(scores[1:], start=2):
+        parts = list(score.parts)
+        if len(parts) != len(base_parts):
+            warnings.append(
+                f"page {page_index} has {len(parts)} part(s) but the first page has "
+                f"{len(base_parts)}; parts were matched in order"
+                + (" and the extra ones dropped" if len(parts) > len(base_parts) else "")
+            )
+        for base_part, part in zip(base_parts, parts):
+            measures = list(part.getElementsByClass("Measure"))
+            if not measures:
+                continue
+            first = measures[0]
+            for class_name in ("Clef", "KeySignature", "TimeSignature"):
+                current = _last(base_part, class_name)
+                for element in list(first.getElementsByClass(class_name)):
+                    if element.offset == 0 and _same(element, current):
+                        first.remove(element)
+            existing = list(base_part.getElementsByClass("Measure"))
+            number = int(existing[-1].number) if existing else 0
+            for measure in measures:
+                part.remove(measure)
+                number += 1
+                measure.number = number
+                base_part.append(measure)
+    return base, warnings
+
+
 def set_instrument(score, name: str) -> None:
     """Make every part use the named instrument (a key of INSTRUMENTS)."""
     cls = INSTRUMENTS[name]

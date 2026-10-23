@@ -1,6 +1,6 @@
 # ihy
 
-**ihy** (named after the Egyptian god of music) turns a photo or scan of **printed** sheet music (PNG or JPG) into a compressed MusicXML file (`.mxl`) that you can open in [MuseScore](https://musescore.org) and other notation programs. It cleans up the image with OpenCV, reads the music with the [homr](https://github.com/liebharc/homr) optical music recognition engine, and writes the result with [music21](https://web.mit.edu/music21/). Recognition is not perfect: ihy gives you a good first draft, which you then **check and correct in MuseScore**. It works on engraved (printed) music only, not handwritten scores.
+**ihy** (named after the Egyptian god of music) turns a photo, scan or PDF of **printed** sheet music (PNG, JPG or PDF) into a compressed MusicXML file (`.mxl`) that you can open in [MuseScore](https://musescore.org) and other notation programs. It renders PDF pages to images, cleans them up with OpenCV, reads the music with the [homr](https://github.com/liebharc/homr) optical music recognition engine, and writes the result with [music21](https://web.mit.edu/music21/). Recognition is not perfect: ihy gives you a good first draft, which you then **check and correct in MuseScore**. It works on engraved (printed) music only, not handwritten scores.
 
 ## Install
 
@@ -33,13 +33,13 @@ pipx install --python python3.12 git+https://github.com/alwynthomasdev/ihy.git
 **A specific version** (pinned to a release tag):
 
 ```bash
-uv tool install --python 3.12 git+https://github.com/alwynthomasdev/ihy.git@v0.2.0
+uv tool install --python 3.12 git+https://github.com/alwynthomasdev/ihy.git@v0.3.0
 # with the install scripts:
-curl -LsSf https://raw.githubusercontent.com/alwynthomasdev/ihy/main/install.sh | sh -s -- https://github.com/alwynthomasdev/ihy.git v0.2.0
+curl -LsSf https://raw.githubusercontent.com/alwynthomasdev/ihy/main/install.sh | sh -s -- https://github.com/alwynthomasdev/ihy.git v0.3.0
 ```
 
 ```powershell
-$env:IHY_REF = "v0.2.0"; irm https://raw.githubusercontent.com/alwynthomasdev/ihy/main/install.ps1 | iex
+$env:IHY_REF = "v0.3.0"; irm https://raw.githubusercontent.com/alwynthomasdev/ihy/main/install.ps1 | iex
 ```
 
 ihy needs Python 3.11 or 3.12 (the versions homr supports). The commands above request 3.12.
@@ -62,7 +62,9 @@ ihy runs on the CPU by default. homr can use a GPU if an ONNX Runtime GPU build 
 | --- | --- |
 | `ihy input.png` | writes input.mxl next to the image |
 | `ihy input.png -o out/score.mxl` | explicit output path |
-| `ihy scans/` | processes every PNG/JPG in the folder |
+| `ihy piece.pdf` | all pages of a PDF, joined into piece.mxl |
+| `ihy piece.pdf --pages 2-3` | only some pages of a PDF (e.g. `2-3` or `1,3`) |
+| `ihy scans/` | processes every PNG/JPG/PDF in the folder |
 | `ihy input.png --no-preprocess` | skip the OpenCV clean-up step |
 | `ihy input.png --binarise` | convert to pure black and white before recognition |
 | `ihy input.png --keep-temp` | keep intermediate files for debugging |
@@ -72,6 +74,15 @@ ihy runs on the CPU by default. homr can use a GPU if an ONNX Runtime GPU build 
 | `ihy --download-models` | download homr's models now (one-off, ~150 MB) |
 
 Options can be combined, for example `ihy cello-part.png --instrument cello --time 6/8,2/4`.
+
+### PDFs
+
+A PDF is converted into **one** `.mxl`: each page is recognised separately and the pages are joined in order, with bar numbers running on from page to page. Clefs, key signatures and time signatures that are just repeated at the top of each page are removed, and real changes are kept.
+
+- **Choosing pages:** `--pages 2-4` or `--pages 1,3` converts only those pages, for example to skip a title page or pick one movement.
+- **Pages without music:** a page homr can't read (a title page, text, a blank page) is skipped with a warning, and the rest of the PDF is still converted. The file only fails if no page could be read.
+- **Scanned and digital PDFs** both work. Pages are rendered at 300 dpi, which suits recognition. A scanned PDF can't be better than the scan inside it, so the tips below still apply.
+- A password-protected PDF has to be unlocked first.
 
 ### Instruments
 
@@ -92,21 +103,22 @@ Bars are kept exactly as recognised. If homr misreads a note's length, that bar 
 Full option list (this is the output of `ihy --help`):
 
 ```text
-usage: ihy [-h] [-o PATH] [--no-preprocess] [--binarise] [--keep-temp]
+usage: ihy [-h] [-o PATH] [--pages RANGE] [--no-preprocess] [--binarise] [--keep-temp]
            [--instrument {bass,cello,piano,viola,violin,voice}] [--time SIG[,SIG...]]
            [--download-models] [--version]
            [input]
 
-Convert an image of printed sheet music (PNG/JPG) into a compressed MusicXML file (.mxl) that opens in MuseScore.
+Convert printed sheet music (a PNG/JPG image or a PDF) into a compressed MusicXML file (.mxl) that opens in MuseScore.
 
 positional arguments:
-  input                 an image file (.png, .jpg, .jpeg) or a folder of images
+  input                 an image (.png, .jpg, .jpeg), a PDF, or a folder of them
 
 options:
   -h, --help            show this help message and exit
   -o PATH, --output PATH
-                        output .mxl file (single image) or output folder (folder input); default:
-                        next to each image
+                        output .mxl file (single input) or output folder (folder input); default:
+                        next to each input
+  --pages RANGE         PDF pages to convert, e.g. 2-4 or 1,3 (default: all); single PDF only
   --no-preprocess       skip the OpenCV clean-up (greyscale, deskew, upscale, denoise)
   --binarise            convert to pure black and white after clean-up (try it on uneven lighting)
   --keep-temp           keep intermediate files (preprocessed image, raw MusicXML) and print where
@@ -122,7 +134,9 @@ options:
 examples:
   ihy input.png                   writes input.mxl next to the image
   ihy input.png -o out/score.mxl  explicit output path
-  ihy scans/                      processes every PNG/JPG in the folder
+  ihy piece.pdf                   all pages of a PDF, joined into piece.mxl
+  ihy piece.pdf --pages 2-3       only some pages of a PDF (e.g. 2-3 or 1,3)
+  ihy scans/                      processes every PNG/JPG/PDF in the folder
   ihy input.png --no-preprocess   skip the OpenCV clean-up step
   ihy input.png --binarise        convert to pure black and white before recognition
   ihy input.png --keep-temp       keep intermediate files for debugging
@@ -135,7 +149,7 @@ examples:
 Open the resulting .mxl in MuseScore and correct any mistakes.
 ```
 
-In folder mode, a failed image doesn't stop the batch. ihy prints a summary at the end and exits with a non-zero code if any image failed. Nothing other than the `.mxl` is written next to your images; intermediate files go to a temporary folder that is deleted afterwards (unless you pass `--keep-temp`).
+In folder mode, a failed file doesn't stop the batch. ihy prints a summary at the end and exits with a non-zero code if any file failed. Nothing other than the `.mxl` is written next to your files; intermediate files go to a temporary folder that is deleted afterwards (unless you pass `--keep-temp`).
 
 ### Worked example
 
@@ -178,7 +192,7 @@ To move to a specific version, run the install command again with the tag (for e
 
 - Scan at **300 dpi or more**. With a phone, fill the frame with the page and keep the camera parallel to it.
 - Keep the page **flat**, with even lighting and **good contrast** (black notes on white paper, no shadows).
-- Use **one page per image**. Crop away anything that isn't music if you can.
+- Use **one page per image** (a PDF can have many pages). Crop away anything that isn't music if you can.
 - If a result looks wrong, try `--no-preprocess`. For unevenly lit photos, try `--binarise`. Don't use `--binarise` on thick, low-resolution scans, because it can merge the symbols together.
 - When correcting in MuseScore, **check the clef, key signature and time signature first**. A mistake there throws off everything after it. Then check note lengths bar by bar.
 
@@ -204,6 +218,12 @@ See [Time signatures](#time-signatures): pass the right values with `--time`, fo
 
 **The part opens as "Voice" in MuseScore.**
 Add `--instrument cello` (or `violin`, `viola`, `bass`, `piano`).
+
+**A PDF page was skipped.**
+homr found no staves on it. That's expected for title pages and text. If the page does have music, check the scan quality, or convert that page on its own with `--pages` and `--keep-temp` to look at the rendered image.
+
+**"could not open … as a PDF" or "password-protected".**
+The file is damaged, isn't really a PDF, or is locked. Open it in a PDF viewer. If it's locked, save an unlocked copy, or export the pages as images and convert those.
 
 **No notes, or very few notes, in the result.**
 The image is probably too small, blurry or low-contrast. See the tips above.

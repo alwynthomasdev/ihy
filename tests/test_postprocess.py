@@ -121,3 +121,66 @@ def test_set_instrument_replaces_existing():
     assert len(found) == 1
     assert isinstance(found[0], instrument.Violoncello)
     assert part.partName == "Violoncello"
+
+
+def _page(bars: int, *, key: int | None = -2, ts: str | None = "3/4", clef: str = "bass", pitch: str = "C3"):
+    from music21 import clef as m21clef, key as m21key
+
+    part = stream.Part()
+    for i in range(bars):
+        m = stream.Measure(number=i + 1)
+        if i == 0:
+            m.insert(0, m21clef.BassClef() if clef == "bass" else m21clef.TrebleClef())
+            if key is not None:
+                m.insert(0, m21key.KeySignature(key))
+            if ts:
+                m.insert(0, meter.TimeSignature(ts))
+        m.append(note.Note(pitch, quarterLength=3))
+        part.append(m)
+    score = stream.Score()
+    score.insert(0, part)
+    return score
+
+
+def test_merge_renumbers_and_drops_repeated_signatures():
+    from ihy.postprocess import merge_scores
+
+    merged, warnings = merge_scores([_page(3), _page(2, pitch="D3")])
+    assert warnings == []
+    part = merged.parts[0]
+    measures = list(part.getElementsByClass("Measure"))
+    assert [m.number for m in measures] == [1, 2, 3, 4, 5]
+    assert measures[3].notes[0].nameWithOctave == "D3"
+    # The repeated bass clef, key and 3/4 at the top of page 2 are gone.
+    assert len(part.recurse().getElementsByClass("Clef")) == 1
+    assert len(part.recurse().getElementsByClass("KeySignature")) == 1
+    assert len(part.recurse().getElementsByClass("TimeSignature")) == 1
+
+
+def test_merge_keeps_real_changes():
+    from ihy.postprocess import merge_scores
+
+    merged, _ = merge_scores([_page(2), _page(2, key=-3, ts="2/4", clef="treble")])
+    part = merged.parts[0]
+    assert [k.sharps for k in part.recurse().getElementsByClass("KeySignature")] == [-2, -3]
+    assert [t.ratioString for t in part.recurse().getElementsByClass("TimeSignature")] == ["3/4", "2/4"]
+    assert [c.sign for c in part.recurse().getElementsByClass("Clef")] == ["F", "G"]
+
+
+def test_merge_with_mismatched_parts_warns():
+    from ihy.postprocess import merge_scores
+
+    second = _page(2)
+    second.insert(0, _page(1).parts[0])  # page 2 has two parts
+    merged, warnings = merge_scores([_page(2), second])
+    assert len(merged.parts) == 1
+    assert len(merged.parts[0].getElementsByClass("Measure")) == 4
+    assert warnings and "page 2 has 2 part(s)" in warnings[0]
+
+
+def test_merged_time_signature_sections_span_pages():
+    """A 6/8 section continuing onto page 2 is judged as one section."""
+    from ihy.postprocess import merge_scores
+
+    merged, _ = merge_scores([_page(4, ts="4/8"), _page(4, ts="4/8")])
+    assert fix_time_signatures(merged) == ["6/8"]

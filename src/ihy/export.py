@@ -100,6 +100,28 @@ def write_mxl(score, output: Path) -> None:
         z.writestr("score.xml", xml, compress_type=zipfile.ZIP_DEFLATED)
 
 
+def load_score(musicxml: Path, output: Path):
+    """Parse homr's MusicXML with music21.
+
+    If parsing fails, the raw MusicXML is copied next to ``output`` (same
+    name, ``.musicxml`` extension) and :class:`InvalidMusicXML` is raised.
+    """
+    # music21 is slow to import, so only pay for it when exporting.
+    import music21
+
+    try:
+        return music21.converter.parse(str(musicxml), format="musicxml")
+    except Exception as exc:  # music21 raises many different exception types
+        raw_copy = output.with_suffix(".musicxml")
+        try:
+            raw_copy.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(musicxml, raw_copy)
+        except OSError:
+            raw_copy = None
+        where = f" Raw homr output saved to {raw_copy}." if raw_copy else ""
+        raise InvalidMusicXML(f"music21 could not read the recognised MusicXML: {exc}.{where}", raw_copy) from exc
+
+
 def to_mxl(
     musicxml: Path,
     output: Path,
@@ -111,26 +133,22 @@ def to_mxl(
 
     ``instrument`` is a key of ``postprocess.INSTRUMENTS``; ``time`` is a list of
     time signatures to apply in order (None = tidy homr's guess automatically).
-
-    If parsing fails, the raw MusicXML is copied next to ``output`` (same
-    name, ``.musicxml`` extension) and :class:`InvalidMusicXML` is raised.
     """
-    # music21 is slow to import, so only pay for it when exporting.
-    import music21
+    output = output.with_suffix(".mxl")
+    score = load_score(musicxml, output)
+    return finish_score(score, output, instrument=instrument, time=time)
 
+
+def finish_score(
+    score,
+    output: Path,
+    *,
+    instrument: str | None = None,
+    time: list[str] | None = None,
+) -> ExportResult:
+    """Apply time-signature and instrument fixes, then write ``output``."""
     output = output.with_suffix(".mxl")
     output.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        score = music21.converter.parse(str(musicxml), format="musicxml")
-    except Exception as exc:  # music21 raises many different exception types
-        raw_copy = output.with_suffix(".musicxml")
-        try:
-            shutil.copyfile(musicxml, raw_copy)
-        except OSError:
-            raw_copy = None
-        where = f" Raw homr output saved to {raw_copy}." if raw_copy else ""
-        raise InvalidMusicXML(f"music21 could not read the recognised MusicXML: {exc}.{where}", raw_copy) from exc
-
     signatures = fix_time_signatures(score, time)
     if instrument:
         set_instrument(score, instrument)

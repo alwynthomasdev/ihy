@@ -2,6 +2,17 @@
 
 All notable changes to ihy are listed here. Versions follow [Semantic Versioning](https://semver.org).
 
+## v0.3.0 (2026-10-23)
+
+### Added
+- **PDF input.** `ihy piece.pdf` renders each page at 300 dpi, recognises it, and joins all pages into one `.mxl`, with continuous bar numbers. Clefs, keys and time signatures repeated at the top of each page are dropped.
+- `--pages RANGE` (e.g. `2-4`, `1,3`) converts only some pages of a PDF.
+- Pages without readable music (title pages, text) are skipped with a warning instead of failing the whole PDF.
+- Folder mode also picks up PDFs.
+
+### Changed
+- Very large images (wider than 3000px) are shrunk before clean-up, which makes big scans and PDF pages faster. homr works at 1920px anyway.
+
 ## v0.2.0 (2026-10-23)
 
 ### Fixed

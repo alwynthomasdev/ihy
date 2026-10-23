@@ -1,6 +1,6 @@
 [project]
 name = "ihy-omr"
-version = "0.2.0"
+version = "0.3.0"
 description = "Sheet music image to MusicXML (.mxl) converter"
 readme = "README.md"
 license = "AGPL-3.0-only"
@@ -19,6 +19,9 @@ dependencies = [
     # would put two copies of cv2 in the same environment.
     "opencv-python-headless>=4.8",
     "numpy>=1.26",
+    # Renders PDF pages to images (homr only reads images). Prebuilt wheels,
+    # no system libraries needed.
+    "pypdfium2>=4.30",
 ]
 
 [project.scripts]
