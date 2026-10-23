@@ -19,10 +19,19 @@ $PythonVersion = "3.12"
 function Say([string]$Message) { Write-Host "ihy install: $Message" }
 function Fail([string]$Message) { throw "ihy install: ERROR: $Message" }
 
+# Windows PowerShell 5.1 turns any stderr output from a native program (uv
+# prints progress there) into an error when ErrorActionPreference is Stop.
+# Run native commands with Continue and judge them by their exit code.
+function Invoke-Native([scriptblock]$Command) {
+    $saved = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try { & $Command } finally { $ErrorActionPreference = $saved }
+}
+
 # 1. uv
 if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
     Say "uv not found, installing it (https://docs.astral.sh/uv/)..."
-    powershell -NoProfile -ExecutionPolicy ByPass -Command "irm https://astral.sh/uv/install.ps1 | iex"
+    Invoke-Native { powershell -NoProfile -ExecutionPolicy ByPass -Command "irm https://astral.sh/uv/install.ps1 | iex" }
     if ($LASTEXITCODE -ne 0) { Fail "could not install uv" }
 }
 
@@ -48,16 +57,18 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
 }
 
 Say "installing $Spec with Python $PythonVersion..."
-uv tool install --python $PythonVersion $Spec
+Invoke-Native { uv tool install --python $PythonVersion $Spec }
 if ($LASTEXITCODE -ne 0) { Fail "uv tool install failed (see messages above)" }
 
 # 4. Make sure the tool folder stays on PATH in future shells.
-uv tool update-shell *> $null
+Invoke-Native { uv tool update-shell 2>&1 | Out-Null }
 
 if (-not (Get-Command ihy -ErrorAction SilentlyContinue)) {
     Fail "ihy was installed but is not on PATH; open a new terminal and try again"
 }
-Say "done: $(ihy --version)"
+$Installed = Invoke-Native { ihy --version 2>&1 }
+if ($LASTEXITCODE -ne 0) { Fail "ihy was installed but does not run: $Installed" }
+Say "done: $Installed"
 Write-Host ""
 Write-Host "Next step:"
 Write-Host "  ihy --help              # see what ihy can do"
